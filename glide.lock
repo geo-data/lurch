@@ -1,0 +1,57 @@
+hash: 970c66a0546f9318c2d572eeeef58d143daf87b0f5bf4589cdba8124e25628ff
+updated: 2016-08-16T14:03:50.062323131Z
+imports:
+- name: github.com/codegangsta/cli
+  version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
+- name: github.com/docker/docker
+  version: 72a312c07b101941254f6d2f128520612e42b301
+  subpackages:
+  - opts
+  - pkg/archive
+  - pkg/fileutils
+  - pkg/homedir
+  - pkg/stdcopy
+  - pkg/idtools
+  - pkg/ioutils
+  - pkg/pools
+  - pkg/promise
+  - pkg/system
+  - pkg/longpath
+- name: github.com/docker/engine-api
+  version: 94a8f8f29307ab291abad6c6f2182d67089aae5d
+  subpackages:
+  - types/swarm
+  - types/filters
+  - types/mount
+  - types/versions
+- name: github.com/docker/go-units
+  version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
+- name: github.com/fsouza/go-dockerclient
+  version: b3a414d6d65411a34b0ac21fa04d3b698ef04d19
+- name: github.com/hashicorp/go-cleanhttp
+  version: ad28ea4487f05916463e2423a55166280e8254b5
+- name: github.com/nlopes/slack
+  version: 4feee83bb2b31d790977ce727a028c6a542c72c7
+- name: github.com/opencontainers/runc
+  version: 12c3d17017f5e50baed65aa4543d7a2771e6afc8
+  subpackages:
+  - libcontainer/user
+- name: github.com/ramr/go-reaper
+  version: 1a6cbc07ef2f7e248769ef4efd80aaa16f97ec12
+- name: github.com/Sirupsen/logrus
+  version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
+- name: github.com/urfave/cli
+  version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
+- name: golang.org/x/net
+  version: 07b51741c1d6423d4a6abab1c49940ec09cb1aaf
+  subpackages:
+  - context
+  - context/ctxhttp
+  - websocket
+- name: golang.org/x/sys
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  subpackages:
+  - unix
+- name: gopkg.in/yaml.v2
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
+devImports: []

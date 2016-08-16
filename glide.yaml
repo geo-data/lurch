@@ -1,0 +1,11 @@
+package: geodata/lurch
+import:
+- package: github.com/codegangsta/cli
+- package: github.com/fsouza/go-dockerclient
+- package: github.com/nlopes/slack
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: gopkg.in/yaml.v2
+- package: github.com/urfave/cli
+- package: github.com/ramr/go-reaper

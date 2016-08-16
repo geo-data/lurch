@@ -1,0 +1,16 @@
+##
+# Docker compose file for running the Lurch Slack bot.
+#
+# This sets up a development environment which can be entered by running:
+#
+#    docker-compose run lurch
+#
+
+# The Lurch Slack bot.
+lurch:
+  build: .
+  dockerfile: ./docker/Dockerfile
+  volumes:
+    - '.:/go/src/geodata/lurch'
+    - '/var/run/docker.sock:/var/run/docker.sock'
+  hostname: lurch
