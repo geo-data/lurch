@@ -196,10 +196,10 @@ func pullDevopsImage(msg *Message, client *docker.Client, image, tag string, aut
 	}()
 
 	status := make(chan string, 1)
+	errors := make(chan error, 1)
 	go func() {
-		var result string
-		if result, err = pullDockerImage(client, image, tag, auth); err != nil {
-			status <- err.Error()
+		if result, err := pullDockerImage(client, image, tag, auth); err != nil {
+			errors <- err
 		} else {
 			status <- result
 		}
@@ -209,17 +209,31 @@ func pullDevopsImage(msg *Message, client *docker.Client, image, tag string, aut
 Loop:
 	for {
 		select {
+		case err = <-errors:
+			if timeoutSent {
+				msg.Reply(fmt.Sprintf("Oops! I've just received this error whilst checking for the image:\n```%s``` You'll need to dig into it I'm afraid :disappointed:.", err.Error()))
+			} else {
+				msg.Reply(fmt.Sprintf("I tried and failed to check for an updated devops Docker image.  This is the message I received:\n```%s``` You'll need to dig into it I'm afraid :disappointed:.", err.Error()))
+			}
+			break Loop
 		case r := <-status:
 			if timeoutSent {
 				// If a holding message has been sent, the user is entitled to
 				// know what the end result is.
-				msg.Reply(r + ".")
-			} else if strings.HasPrefix(r, "Error:") {
-				msg.Reply(fmt.Sprintf("I tried and failed to check for an updated devops Docker image: %s. :disappointed:", r))
+				if strings.HasPrefix(r, "Status: Downloaded newer") {
+					msg.Reply("Great - there's a newer image that I'm now using.")
+				} else if strings.HasPrefix(r, "Status: Image is up to date") {
+					msg.Reply("No new image is available: I'll continue using the existing one...")
+				} else {
+					msg.Reply(fmt.Sprintf("I received this message whilst checking for the image.  Not sure what it means...\n```%s```", r))
+				}
 			} else if strings.HasPrefix(r, "Status: Downloaded newer") {
 				msg.Reply("Ah!  I've just retrieved the latest devops Docker image. :triumph:")
+			} else if strings.HasPrefix(r, "Status: Image is up to date") {
+				// Ignore messages where the image status hasn't changed and no timeout was triggered.
 			} else {
-				// Ignore messages where the image status hasn't changed.
+				// An unknown message: we'd better pass it on.
+				msg.Reply(fmt.Sprintf("I'm passing on this message I received when checking for an updated devops Docker image.  Not sure what it means...\n```%s```", r))
 			}
 			break Loop
 		case <-timeout:
