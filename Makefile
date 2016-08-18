@@ -2,6 +2,7 @@
 # Makefile for the Lurch Slack bot.
 #
 # Targets:
+# - docker    create a docker image containing Lurch.
 # - clean     delete all generated files.
 # - run       run the service.
 # - build     compile executable.
@@ -18,6 +19,13 @@ BUILD_DEPS := vendor $(SRC_FILES)
 
 # Create production Docker image components by default.
 all: build
+
+# Create a docker image for use in production environments.  This first builds
+# the development docker image, then copies the lurch binary from this image to
+# the current working directory, from where it builds the production image.
+docker:
+	docker run --rm -v $$(pwd):/tmp/lurch $$(docker build --quiet --file docker/Dockerfile .) cp lurch cacert.pem /tmp/lurch && \
+	docker build -t geodata/lurch:latest .
 
 # Create a development environment.
 dev:
@@ -62,4 +70,4 @@ cacert.pem:
 	curl --silent --location https://curl.haxx.se/ca/cacert.pem > cacert.pem
 
 # Targets without filesystem equivalents.
-.PHONY: all build clean run dev
+.PHONY: all build clean run dev docker
