@@ -120,14 +120,15 @@ This will create an image tagged `geodata/lurch:latest`, which can be run as
 follows:
 
 ```
-docker run -d \
-  -v /var/run/docker.sock:/var/run/docker.sock
-  geodata/lurch:latest --slack-token xxx --docker-image your.registry.com/your/devops-image:version
+docker run -d -v /var/run/docker.sock:/var/run/docker.sock \
+  geodata/lurch:latest \
+    --slack-token xxx \
+    --docker-image your.registry.com/your/devops-image:version
 ```
 
 A key point here is that you need to bind mount the docker socket so that Lurch
 can communicate with the docker daemon in order to run the devops docker image.
 
-Note that you can also set environment variables instead of using Lurch's
-command line flags (the `docker run --env-file` flag is a useful option for
-specifying environment variables containing secrets like your Slack token).
+Note that you can set environment variables instead of using Lurch's command
+line flags (the `docker run --env-file` flag is a useful option for specifying
+environment variables containing secrets like your Slack token).
