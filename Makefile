@@ -35,6 +35,7 @@ test:
 clean:
 	@rm -f lurch
 	@rm -rf vendor
+	@rm -f cacert.pem
 
 # Run the service.
 run: $(BUILD_DEPS)
