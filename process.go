@@ -403,8 +403,9 @@ func processMessage(
 	case "deploy":
 		if deployID != ev.Channel {
 			msg.Reply(fmt.Sprintf("I'm sorry, you can only `%s` on the *%s* channel. This way everyone is notified.", cmd[0], config.CommandChannel))
+		} else {
+			processDeploy(msg, cmd[1:], restart, state, config)
 		}
-		processDeploy(msg, cmd[1:], restart, state, config)
 
 	default:
 		sendHelp("I don't understand", msg)
