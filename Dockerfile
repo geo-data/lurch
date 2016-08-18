@@ -9,6 +9,10 @@
 FROM scratch
 MAINTAINER Homme Zwaagstra <hrz@geodata.soton.ac.uk>
 
+# Install the SSL/TLS root certificates.
 ADD cacert.pem /etc/ssl/certs/ca-certificates.crt
+
+# Install the lurch binary.
 ADD ./lurch /bin/
-CMD ["/bin/lurch"]
+
+ENTRYPOINT ["/bin/lurch"]
