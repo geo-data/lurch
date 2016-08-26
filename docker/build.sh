@@ -14,10 +14,6 @@ curl -LsS https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.
 		| tar xzO linux-amd64/glide > /usr/local/bin/glide
 chmod +x /usr/local/bin/glide
 
-# Install rsync (used in the Drone testing).
-apt-get update -y
-apt-get install -y rsync
-
 # Change to the source root directory.
 SRC_DIR="$(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd ) )"
 cd $SRC_DIR
