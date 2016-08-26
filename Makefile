@@ -46,8 +46,8 @@ clean:
 	@rm -f cacert.pem
 
 # Run the service.
-run: $(BUILD_DEPS)
-	go run *.go
+run: realize.config.yaml
+	realize run
 
 # Build an executable optimised for a linux container environment. See
 # <https://medium.com/@kelseyhightower/optimizing-docker-images-for-static-binaries-b5696e26eb07#.otbjvqo3i>.

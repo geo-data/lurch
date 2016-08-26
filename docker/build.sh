@@ -22,8 +22,16 @@ apt-get install -y rsync
 SRC_DIR="$(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd ) )"
 cd $SRC_DIR
 
-# Build the application.
-make clean build
+# Get the golang dependencies.
+make clean vendor
+
+# Install realize.
+cd ${SRC_DIR}/vendor/github.com/tockins/realize
+go install
+
+# Build lurch.
+cd $SRC_DIR
+make build
 
 # Clean up.
 apt-get clean

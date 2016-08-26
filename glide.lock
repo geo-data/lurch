@@ -1,5 +1,5 @@
-hash: 970c66a0546f9318c2d572eeeef58d143daf87b0f5bf4589cdba8124e25628ff
-updated: 2016-08-16T14:03:50.062323131Z
+hash: d07af8f9baa2958038941743f3a2f2fff42e86250f523aef606eb518751e6c59
+updated: 2016-08-26T06:48:47.025137636Z
 imports:
 - name: github.com/codegangsta/cli
   version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
@@ -26,10 +26,18 @@ imports:
   - types/versions
 - name: github.com/docker/go-units
   version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
+- name: github.com/fatih/color
+  version: 87d4004f2ab62d0d255e0a38f1680aa534549fe3
+- name: github.com/fsnotify/fsnotify
+  version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/fsouza/go-dockerclient
   version: b3a414d6d65411a34b0ac21fa04d3b698ef04d19
 - name: github.com/hashicorp/go-cleanhttp
   version: ad28ea4487f05916463e2423a55166280e8254b5
+- name: github.com/mattn/go-colorable
+  version: ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8
+- name: github.com/mattn/go-isatty
+  version: 66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8
 - name: github.com/nlopes/slack
   version: 4feee83bb2b31d790977ce727a028c6a542c72c7
 - name: github.com/opencontainers/runc
@@ -40,6 +48,8 @@ imports:
   version: 1a6cbc07ef2f7e248769ef4efd80aaa16f97ec12
 - name: github.com/Sirupsen/logrus
   version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
+- name: github.com/tockins/realize
+  version: afd9988c8c0954cadf05d2647f31fc5e636623a5
 - name: github.com/urfave/cli
   version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
 - name: golang.org/x/net
@@ -52,6 +62,8 @@ imports:
   version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
   subpackages:
   - unix
+- name: gopkg.in/urfave/cli.v2
+  version: adf6897aa2891768c93dc274b9beb3c7e855bf0d
 - name: gopkg.in/yaml.v2
   version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
 devImports: []

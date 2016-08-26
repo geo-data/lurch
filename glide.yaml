@@ -9,3 +9,9 @@ import:
 - package: gopkg.in/yaml.v2
 - package: github.com/urfave/cli
 - package: github.com/ramr/go-reaper
+- package: github.com/tockins/realize
+- package: github.com/fatih/color
+- package: github.com/fsnotify/fsnotify
+- package: gopkg.in/urfave/cli.v2
+- package: github.com/mattn/go-colorable
+- package: github.com/mattn/go-isatty
