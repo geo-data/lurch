@@ -1,10 +1,10 @@
 # Lurch - A DevOps Slack Bot
 
-Lurch is a [Slack bot](https://api.slack.com/bot-users) designed to manage
-custom deployments via [Ansible](https://www.ansible.com/). You tell Lurch what
-to do in a Slack channel and he will translate those instructions into a command
-that invokes an Ansible playbook.  You define the playbooks to do what you want
-in terms of deployments.
+Lurch is a [Slack bot](https://api.slack.com/bot-users) designed to run
+[Ansible](https://www.ansible.com/) playbooks. You tell Lurch what to do in a
+Slack channel and he will translate those instructions into a command that
+invokes an Ansible playbook.  You define the playbooks to do what you want in
+terms of deployments.
 
 ## Requirements
 
@@ -132,3 +132,30 @@ can communicate with the docker daemon in order to run the devops docker image.
 Note that you can set environment variables instead of using Lurch's command
 line flags (the `docker run --env-file` flag is a useful option for specifying
 environment variables containing secrets like your Slack token).
+
+## Contributing
+
+Typing `make dev` from project root builds development docker image and runs a
+container, placing you at a command prompt within this container.  This uses
+Docker Compose, so ensure you have it installed.
+
+The project root is bind mounted to the current working directory in the
+container allowing you to edit files on the host and run `make` commands within
+the container.  The main command you'll use is `make run` which builds and runs
+Lurch using [Realize](https://tockins.github.io/realize/).  This provides live
+reloading of the `lurch` binary whenever source files change.
+
+You'll want to prefix `make run` with Lurch specific environment variables
+defining your Slack and deployment environment e.g.:
+
+```
+LURCH_SLACK_TOKEN=xxx \
+LURCH_COMMAND_CHANNEL=deploy \
+LURCH_DEBUG=true \
+LURCH_DOCKER_IMAGE=my.registry.org/my/devops-image:latest \
+LURCH_REGISTRY_ADDRESS=my.registry.org \
+LURCH_REGISTRY_EMAIL=me@example.org \
+LURCH_REGISTRY_USER=me \
+LURCH_REGISTRY_PASSWORD=xxx \
+make run
+```
