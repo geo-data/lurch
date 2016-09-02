@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const version string = "0.1.0"
+var version, commit string
 
 func catchSignals(exit chan<- bool, rtm *slack.RTM, channelID string, logger *log.Logger) {
 	c := make(chan os.Signal, 1)
@@ -130,6 +130,12 @@ Loop:
 	select {}
 }
 
+func init() {
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("%s commit=%s\n", c.App.Version, commit)
+	}
+}
+
 func main() {
 	//  Start background reaping of orphaned child processes.
 	go reaper.Reap()
@@ -140,6 +146,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name, config.BotName = name, name
 	app.Version = version
+
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Homme Zwaagstra",

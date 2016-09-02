@@ -51,8 +51,12 @@ run: realize.config.yaml
 
 # Build an executable optimised for a linux container environment. See
 # <https://medium.com/@kelseyhightower/optimizing-docker-images-for-static-binaries-b5696e26eb07#.otbjvqo3i>.
+lurch: LURCH_VERSION := $(shell git describe --tags --abbrev=0 --match 'v[0-9]*')
+lurch: LURCH_COMMIT := $(shell git rev-parse --short HEAD)
 lurch: $(BUILD_DEPS)
-	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' -o lurch
+	CGO_ENABLED=0 \
+	GOOS=linux \
+	go build -a -tags netgo -ldflags '-w -X main.version=$(LURCH_VERSION) -X main.commit=$(LURCH_COMMIT)' -o lurch
 
 vendor: glide.yaml glide.lock
 	glide install && \
