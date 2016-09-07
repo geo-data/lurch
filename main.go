@@ -148,7 +148,7 @@ func main() {
 	app.Version = version
 
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "Homme Zwaagstra",
 			Email: "hrz@geodata.soton.ac.uk",
 		},
@@ -162,10 +162,11 @@ func main() {
 			EnvVar:      "LURCH_SLACK_TOKEN",
 			Destination: &config.SlackToken,
 		},
-		cli.StringFlag{
-			Name:   "docker-image",
-			Usage:  "the Docker image to manipulate",
-			EnvVar: "LURCH_DOCKER_IMAGE",
+		cli.BoolFlag{
+			Name:        "update-image",
+			Usage:       "check the registry for newer versions of the docker image",
+			EnvVar:      "LURCH_UPDATE_IMAGE",
+			Destination: &config.UpdateImage,
 		},
 		cli.StringFlag{
 			Name:        "command-channel",

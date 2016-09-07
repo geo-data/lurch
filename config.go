@@ -7,6 +7,7 @@ type Config struct {
 	CommandChannel string
 	SlackToken     string
 	Docker         dockerConfig
+	UpdateImage    bool
 	Debug          bool
 }
 

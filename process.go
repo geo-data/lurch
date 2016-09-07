@@ -93,7 +93,7 @@ func getProjectList(client *docker.Client, image, tag string) (list ProjectList,
 
 // getProjects returns an ordered list of projects from list.
 func getProjects(list ProjectList) (projects []string) {
-	for project, _ := range list {
+	for project := range list {
 		projects = append(projects, project)
 	}
 	sort.Strings(projects)
