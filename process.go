@@ -509,16 +509,9 @@ func processDeploy(msg *Message, cmd []string, state *DeployState, config *Confi
 	return
 }
 
-func processConnectedEvent(rtm *slack.RTM, channelID string, config *Config) {
-	msg := NewChannelMessage(rtm, channelID)
-
-	client, err := getDockerClient()
-	if err != nil {
-		msg.Send(fmt.Sprintf("I could not create the Docker client: %s", err))
-		return
-	}
-
-	if updated, err := updateDevopsImage(msg, client, config); err != nil {
+func updateConfig(msg Conversation, client *docker.Client, config *Config) (err error) {
+	var updated bool
+	if updated, err = updateDevopsImage(msg, client, config); err != nil {
 		return
 	} else if !updated {
 		// Perform the initial configuration.
@@ -529,6 +522,22 @@ func processConnectedEvent(rtm *slack.RTM, channelID string, config *Config) {
 		if err = updateConfigFromImage(msg, client, config); err != nil {
 			return
 		}
+	}
+
+	return
+}
+
+func processConnectedEvent(rtm *slack.RTM, channelID string, config *Config) {
+	msg := NewChannelMessage(rtm, channelID)
+
+	client, err := getDockerClient()
+	if err != nil {
+		msg.Send(fmt.Sprintf("I could not create the Docker client: %s", err))
+		return
+	}
+
+	if updateConfig(msg, client, config) == nil {
+		msg.Send("You rang...?")
 	}
 
 	return

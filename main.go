@@ -94,7 +94,7 @@ Loop:
 				//fmt.Println("Infos:", ev.Info)
 				//fmt.Println("Connection counter:", ev.ConnectionCount)
 				lurch = NewUser(ev.Info.User)
-				go processConnectedEvent(rtm, channelID, config)
+				processConnectedEvent(rtm, channelID, config)
 
 			case *slack.DisconnectedEvent:
 				var msg string
