@@ -18,10 +18,12 @@ func sendHelp(intro string, msg *Message) {
 	msg.Reply(fmt.Sprintf(`%s. I can help with the following commands:
 • *%s* - deploy an application.
 • *%s* - list applications I can deploy.
+• *%s* - give an idea of how advanced I am.
 Use *%s* for further details.`,
 		intro,
 		"`deploy`",
 		"`list`",
+		"`version`",
 		"`help <command>`",
 	))
 }
@@ -37,7 +39,7 @@ func helpList(intro string, msg *Message) {
 
 func processHelp(msg *Message, cmd []string) {
 	if len(cmd) == 0 {
-		sendHelp("Hmmm", msg)
+		sendHelp("Sure", msg)
 		return
 	}
 
@@ -46,8 +48,10 @@ func processHelp(msg *Message, cmd []string) {
 		msg.Reply("Use *`deploy <project> <service>`* to deploy a service related to a project. If a project has custom actions associated with it then just replace `deploy` with the name of the action.")
 	case "list":
 		helpList("", msg)
+	case "version":
+		msg.Reply("This provides the version number I'm tagged with and the commit ID I was built from.")
 	default:
-		sendHelp("I am a simple entity: I don't understand.", msg)
+		msg.Reply("How about giving me a chance and using a command I understand?!")
 	}
 }
 
@@ -530,6 +534,19 @@ func processConnectedEvent(rtm *slack.RTM, channelID string, config *Config) {
 	return
 }
 
+func processVersion(msg *Message) {
+	var reply string
+	repo := "https://github.com/geo-data/lurch"
+	if version == "" || commit == "" {
+		reply = fmt.Sprintf("It looks like I'm running as a development version.")
+	} else {
+		reply = fmt.Sprintf("I'm tagged as version <%s/releases/tag/%s|%s> built from commit <%s/commit/%s|%s>.", repo, version, version, repo, commit, commit)
+	}
+
+	msg.Reply(reply)
+	return
+}
+
 func processMessage(
 	rtm *slack.RTM,
 	ev *slack.MessageEvent,
@@ -558,6 +575,9 @@ func processMessage(
 
 	case "list":
 		processList(msg, cmd[1:], config)
+
+	case "version":
+		processVersion(msg)
 
 	case "deploy":
 		fallthrough
