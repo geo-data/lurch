@@ -193,10 +193,9 @@ func main() {
 			EnvVar: "LURCH_DOCKER_IMAGE",
 		},
 		cli.BoolFlag{
-			Name:        "update-image",
-			Usage:       "check the registry for newer versions of the docker image",
-			EnvVar:      "LURCH_UPDATE_IMAGE",
-			Destination: &config.UpdateImage,
+			Name:   "no-pull",
+			Usage:  "don't check the registry for newer versions of the docker image",
+			EnvVar: "LURCH_NO_PULL",
 		},
 		cli.StringFlag{
 			Name:        "command-channel",
@@ -246,6 +245,8 @@ func main() {
 
 	app.Action = func(c *cli.Context) (err error) {
 		logger := log.New(os.Stdout, fmt.Sprintf("%s: ", config.BotName), log.Lshortfile|log.LstdFlags)
+
+		config.UpdateImage = !c.Bool("no-pull")
 
 		if config.SlackToken == "" {
 			err = errors.New("no slack token is provided")
