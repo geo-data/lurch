@@ -13,18 +13,26 @@ type Message struct {
 }
 
 func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
-	var prefix string
+	var prefix, text string
 
-	if strings.HasPrefix(ev.Text, user.Name) {
+	// Get the message text.
+	if ev.SubMessage != nil && ev.SubType == "message_changed" {
+		text = ev.SubMessage.Text
+	} else {
+		text = ev.Text
+	}
+
+	// Decide if the message is for us.
+	if strings.HasPrefix(text, user.Name) {
 		prefix = user.Name
-	} else if strings.HasPrefix(ev.Text, user.Mention) {
+	} else if strings.HasPrefix(text, user.Mention) {
 		prefix = user.Mention
 	} else {
 		return nil // The message isn't for the user.
 	}
 
 	return &Message{
-		Text: strings.Trim(strings.TrimPrefix(ev.Text, prefix), ": "),
+		Text: strings.Trim(strings.TrimPrefix(text, prefix), ": "),
 		rtm:  rtm,
 		ev:   ev,
 	}
