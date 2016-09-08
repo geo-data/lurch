@@ -94,7 +94,7 @@ Loop:
 				//fmt.Println("Infos:", ev.Info)
 				//fmt.Println("Connection counter:", ev.ConnectionCount)
 				lurch = NewUser(ev.Info.User)
-				rtm.SendMessage(rtm.NewOutgoingMessage("You rang?", channelID))
+				go processConnectedEvent(rtm, channelID, config)
 
 			case *slack.DisconnectedEvent:
 				var msg string
@@ -161,6 +161,11 @@ func main() {
 			Usage:       "your Slack API token",
 			EnvVar:      "LURCH_SLACK_TOKEN",
 			Destination: &config.SlackToken,
+		},
+		cli.StringFlag{
+			Name:   "docker-image",
+			Usage:  "the docker image containing your Ansible playbooks",
+			EnvVar: "LURCH_DOCKER_IMAGE",
 		},
 		cli.BoolFlag{
 			Name:        "update-image",

@@ -45,3 +45,31 @@ func (msg *Message) Command() (cmd []string) {
 func (msg *Message) Reply(reply string) {
 	msg.rtm.SendMessage(msg.rtm.NewOutgoingMessage(reply, msg.ev.Channel))
 }
+
+// Send implements the Conversation interface.
+func (msg *Message) Send(message string) error {
+	msg.Reply(message)
+	return nil
+}
+
+type Conversation interface {
+	Send(msg string) error
+}
+
+type ChannelMessage struct {
+	rtm       *slack.RTM
+	channelID string
+}
+
+func NewChannelMessage(rtm *slack.RTM, channelID string) *ChannelMessage {
+	return &ChannelMessage{
+		rtm:       rtm,
+		channelID: channelID,
+	}
+}
+
+// Send implements the Conversation interface.
+func (m *ChannelMessage) Send(msg string) error {
+	m.rtm.SendMessage(m.rtm.NewOutgoingMessage(msg, m.channelID))
+	return nil
+}
