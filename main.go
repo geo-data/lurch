@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -55,13 +56,37 @@ func catchSignals(exit chan<- bool, rtm *slack.RTM, channelID string, logger *lo
 	}()
 }
 
+func GetChannelID(api *slack.Client, channelName string, maxAttempts int, logger *log.Logger) (id string, err error) {
+	for attempts := 1; attempts <= maxAttempts; attempts++ {
+		id, err = GetIDFromName(api, channelName)
+		if err == nil {
+			break
+		}
+
+		// If it's a temporary network error, try again.
+		if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+			duration := time.Duration(attempts) * time.Second
+			logger.Printf("network error connecting to slack (attempt %d of %d): trying again in %s", attempts, maxAttempts, duration)
+			time.Sleep(duration)
+			continue
+		} else {
+			return
+		}
+	}
+
+	return
+}
+
 func run(config *Config, logger *log.Logger) (err error) {
 	api := slack.New(config.SlackToken)
 	slack.SetLogger(logger)
 	api.SetDebug(config.Debug)
 
 	var channelID string
-	channelID, err = GetIDFromName(api, config.CommandChannel)
+	if channelID, err = GetChannelID(api, config.CommandChannel, config.ConnAttempts, logger); err != nil {
+		return
+	}
+
 	if err != nil {
 		return
 	} else if channelID == "" {
@@ -209,6 +234,13 @@ func main() {
 			Usage:       "produce debugging output",
 			EnvVar:      "LURCH_DEBUG",
 			Destination: &config.Debug,
+		},
+		cli.IntFlag{
+			Name:        "conn-attempts",
+			Usage:       "the maximum number of attempts to be made to connect to Slack on startup",
+			EnvVar:      "LURCH_CONN_ATTEMPTS",
+			Value:       20,
+			Destination: &config.ConnAttempts,
 		},
 	}
 

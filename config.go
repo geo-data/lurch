@@ -13,6 +13,7 @@ type Config struct {
 	Docker         dockerConfig
 	UpdateImage    bool
 	Debug          bool
+	ConnAttempts   int
 	Stacks         map[string]Stack
 }
 
