@@ -46,7 +46,7 @@ clean:
 	@rm -f cacert.pem
 
 # Run the service.
-run: realize.config.yaml
+run: realize.config.yaml vendor
 	realize run
 
 # Build an executable optimised for a linux container environment. See
