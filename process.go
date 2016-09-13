@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -55,7 +56,7 @@ func processHelp(msg *Message, cmd []string) {
 	}
 }
 
-// Desentence trims text of whitespace, lowercases the initial character and
+// Desentence trims s of whitespace, lowercases the initial character and
 // removes any trailing period, returning the result.
 func Desentence(s string) string {
 	if s == "" {
@@ -64,6 +65,17 @@ func Desentence(s string) string {
 
 	s = strings.TrimSuffix(strings.TrimSpace(s), ".")
 	return strings.ToLower(string([]rune(s)[0])) + s[1:]
+}
+
+// Sentence trims s of whitespace, capitalises the first word and adds suffix,
+// returning the result.
+func Sentence(s, suffix string) string {
+	if s == "" {
+		return s
+	}
+
+	s = strings.TrimSpace(s)
+	return strings.ToUpper(string([]rune(s)[0])) + s[1:] + suffix
 }
 
 func listProjects(msg *Message, config *Config) {
@@ -238,7 +250,7 @@ func updateConfigFromImage(msg Conversation, client *docker.Client, config *Conf
 		lurchYaml string = "lurch.yml"
 	)
 
-	exit, output, err = runDockerCommand(client, config.Docker.Image, config.Docker.Tag, []string{"cat", lurchYaml})
+	exit, output, err = runDockerCommand(client, config.Docker.Image, config.Docker.Tag, []string{"cat", lurchYaml}, nil)
 	if err != nil {
 		msg.Send(fmt.Sprintf("I'm sorry, I couldn't update my configuration from the new image.  The message I got is:\n```%s```", err))
 		return
@@ -459,17 +471,100 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 	}
 	args = append(args, pb.Location)
 
-	exit, output, err := runDockerCommand(client, config.Docker.Image, config.Docker.Tag, args)
+	env := []string{"ANSIBLE_STDOUT_CALLBACK=json", "ANSIBLE_RETRY_FILES_ENABLED=0"}
+	exit, output, err := runDockerCommand(client, config.Docker.Image, config.Docker.Tag, args, env)
 	if err != nil {
-		msg.Reply(fmt.Sprintf("I failed to %s the *%s %s* service: %s", action, stack, playbook, err))
-	} else if exit != 0 {
+		msg.Reply(fmt.Sprintf("I'm sorry, *%s* failed on *%s %s*: %s", action, stack, playbook, err))
+	}
+
+	var results *Results
+	if err = json.Unmarshal(output, &results); err != nil {
+		if exit == 0 {
+			msg.Send(fmt.Sprintf("Oh dear! I couldn't read the JSON returned by Ansible:```%s```", err))
+		} else {
+			reply := fmt.Sprintf("I'm sorry, *%s* failed on *%s %s*:\n>>>%s", action, stack, playbook, string(output))
+			msg.Send(reply)
+			image := strings.Join([]string{config.Docker.Image, config.Docker.Tag}, ":")
+			cmd := fmt.Sprintf("docker pull %s && \\\ndocker run -t --rm %s %s", image, image, strings.Join(args, " "))
+			reply = fmt.Sprintf("You can replicate this problem from a terminal with:\n```%s```", cmd)
+			msg.Send(reply)
+		}
+		return
+	}
+
+	if exit != 0 {
+		type FailedTask struct {
+			Name, Msg string
+		}
+		type Failures map[string][]FailedTask
+		plays := make(map[string]Failures)
+		for _, play := range results.Plays {
+			hosts := make(Failures)
+			for _, task := range play.Tasks {
+				tname := task.Name.Name
+				for hname, host := range task.Hosts {
+					if host.Failed {
+						hosts[hname] = append(hosts[hname], FailedTask{tname, host.Msg})
+					}
+				}
+			}
+			if len(hosts) > 0 {
+				plays[play.Name.Name] = hosts
+			}
+		}
+
+		reply := fmt.Sprintf("I'm sorry, *%s* failed on *%s %s*:", action, stack, playbook)
+		for _, hosts := range plays {
+			for host, tasks := range hosts {
+				ttxt := "task"
+				if len(tasks) > 1 {
+					ttxt += "s"
+				}
+				r := fmt.Sprintf("The *%s* host has %d %s failing:", host, len(tasks), ttxt)
+				for i, task := range tasks {
+					r += fmt.Sprintf("\n*%d. %s* returned this error:\n>%s", i+1, Sentence(task.Name, ""), strings.Replace(task.Msg, "\n", "\n>", -1))
+				}
+				if (len(reply) + len(r) + 1) > slack.MaxMessageTextLength {
+					if len(reply) > 0 {
+						msg.Reply(reply)
+					}
+					reply = r
+				} else {
+					reply += fmt.Sprintf("\n%s", r)
+				}
+			}
+		}
+		if len(reply) > 0 {
+			msg.Reply(reply)
+		}
+
+		// For some reason Slack doesn't like these two messages concatenated, so send them separately.
 		image := strings.Join([]string{config.Docker.Image, config.Docker.Tag}, ":")
 		cmd := fmt.Sprintf("docker pull %s && \\\ndocker run -t --rm %s %s", image, image, strings.Join(args, " "))
-		// For some reason Slack doesn't like these two messages concatenated, so send them separately.
-		msg.Reply(fmt.Sprintf("I failed to %s the *%s %s* service:\n```%s```", action, stack, playbook, string(output)))
 		msg.Reply(fmt.Sprintf("You can replicate this problem from a terminal with:\n```%s```", cmd))
 	} else {
-		msg.Reply(fmt.Sprintf("*%s %s* successfully %sed.", stack, playbook, action))
+		plays := results.GetStatsList()
+		reply := fmt.Sprintf("All *%s %s* tasks ran ok", stack, playbook)
+		if len(plays) > 1 {
+			reply += fmt.Sprintf(" on the following %d hosts:", len(results.Stats))
+			for _, name := range plays {
+				stat := results.Stats[name]
+				if stat.Changed == 0 {
+					reply += fmt.Sprintf("\n  • *%s*: no changes reported.", name)
+				} else {
+					reply += fmt.Sprintf("\n  • *%s*: %d changed, %d unchanged and %d skipped.", name, stat.Changed, stat.Ok, stat.Skipped)
+				}
+			}
+		} else {
+			name := plays[0]
+			stat := results.Stats[name]
+			if stat.Changed == 0 {
+				reply += fmt.Sprintf(" on the *%s* host with no changes reported.", name)
+			} else {
+				reply += fmt.Sprintf(" on the *%s* host with %d changed, %d unchanged and %d skipped.", name, stat.Changed, stat.Ok, stat.Skipped)
+			}
+		}
+		msg.Reply(reply)
 	}
 
 	return

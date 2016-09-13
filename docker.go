@@ -59,7 +59,7 @@ func pullDockerImage(client *docker.Client, image, tag string, auth docker.AuthC
 	return
 }
 
-func runDockerCommand(client *docker.Client, image, tag string, args []string) (exit int, output []byte, err error) {
+func runDockerCommand(client *docker.Client, image, tag string, args, env []string) (exit int, output []byte, err error) {
 	// Set the timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -76,6 +76,7 @@ func runDockerCommand(client *docker.Client, image, tag string, args []string) (
 		&docker.Config{
 			Image: fullImage,
 			Cmd:   args,
+			Env:   env,
 		},
 		&docker.HostConfig{
 			AutoRemove: true,
