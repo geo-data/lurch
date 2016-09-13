@@ -41,6 +41,8 @@ func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
 		return nil
 	} else if strings.HasPrefix(text, user.Mention) {
 		prefix = user.Mention
+	} else if strings.Contains(text, user.Mention) {
+		text = ""
 	} else {
 		return nil // The message isn't for the user.
 	}
