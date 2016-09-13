@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/nlopes/slack"
@@ -15,6 +16,11 @@ type Message struct {
 func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
 	var prefix, text string
 
+	// Don't respond to myself.
+	if ev.User == user.ID {
+		return nil
+	}
+
 	// Get the message text.
 	if ev.SubMessage != nil && ev.SubType == "message_changed" {
 		text = ev.SubMessage.Text
@@ -24,7 +30,15 @@ func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
 
 	// Decide if the message is for us.
 	if strings.HasPrefix(text, user.Name) {
-		prefix = user.Name
+		var reply string
+		if ev.User != "" {
+			reply = fmt.Sprintf("<@%s> are you talking to me?", ev.User)
+		} else {
+			reply = "Are you talking to me?"
+		}
+		reply += fmt.Sprintf(" Please mention me directly as %s.", user.Mention)
+		sendMessage(reply, rtm, ev)
+		return nil
 	} else if strings.HasPrefix(text, user.Mention) {
 		prefix = user.Mention
 	} else {
@@ -50,8 +64,12 @@ func (msg *Message) Command() (cmd []string) {
 	return
 }
 
+func sendMessage(msg string, rtm *slack.RTM, ev *slack.MessageEvent) {
+	rtm.SendMessage(rtm.NewOutgoingMessage(msg, ev.Channel))
+}
+
 func (msg *Message) Reply(reply string) {
-	msg.rtm.SendMessage(msg.rtm.NewOutgoingMessage(reply, msg.ev.Channel))
+	sendMessage(reply, msg.rtm, msg.ev)
 }
 
 // Send implements the Conversation interface.
