@@ -362,17 +362,6 @@ Loop:
 	return
 }
 
-func deployAction(msg *Message, config *Config) {
-	reply := "You need to specify a project by name.  "
-	projects := config.GetStackList()
-	if len(projects) > 1 {
-		reply += fmt.Sprintf("I'm aware of the following %d projects:\n  • %s", len(projects), strings.Join(projects, "\n  • "))
-	} else {
-		reply = fmt.Sprintf("The only project I know about is *%s*.", projects[0])
-	}
-	msg.Reply(reply)
-}
-
 func lockProject(msg *Message, project string, state *DeployState) (unlock func()) {
 	if !state.Set(project) {
 		msg.Reply(fmt.Sprintf("Patience! I'm already busy deploying services from *%s* - please wait until I'm done.", project))
@@ -588,9 +577,9 @@ func processDeploy(msg *Message, cmd []string, state *DeployState, config *Confi
 
 	switch len(cmd) {
 	case 0:
-		msg.Reply("You need to specify at least an action and a project.")
+		fallthrough
 	case 1: // <action>
-		deployAction(msg, config)
+		msg.Reply("I'm not sure what you mean. Try *`help`* instead.")
 	case 2: // <action> <stack>
 		action, stack := cmd[0], cmd[1]
 		deployStack(msg, action, stack, state, config)
@@ -598,7 +587,7 @@ func processDeploy(msg *Message, cmd []string, state *DeployState, config *Confi
 		action, stack, playbook := cmd[0], cmd[1], cmd[2]
 		deployPlaybook(msg, action, stack, playbook, client, state, config)
 	default: // Unhandled.
-		msg.Reply("That sounds way too complicated for a simpleton like me to understand!")
+		msg.Reply("That sounds way too complicated for a simpleton like me to understand! Try *`help`* instead.")
 	}
 
 	return
