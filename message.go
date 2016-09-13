@@ -31,19 +31,18 @@ func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
 	// Decide if the message is for us.
 	if strings.HasPrefix(text, user.Name) {
 		var reply string
-		if ev.User != "" {
-			reply = fmt.Sprintf("<@%s> are you talking to me?", ev.User)
+		if len(ev.Members) > 2 {
+			reply = fmt.Sprintf("<@%s> are you talking to me?  Please mention me directly as %s.", ev.User, user.Mention)
 		} else {
-			reply = "Are you talking to me?"
+			reply = fmt.Sprintf("As it's just the two of us I assume you're talking to me?  In company you need to mention me directly as %s, but one-to-one you don't need to get my attention: I'll try and respond to everything you say.", user.Mention)
 		}
-		reply += fmt.Sprintf(" Please mention me directly as %s.", user.Mention)
 		sendMessage(reply, rtm, ev)
 		return nil
 	} else if strings.HasPrefix(text, user.Mention) {
 		prefix = user.Mention
 	} else if strings.Contains(text, user.Mention) {
 		text = ""
-	} else {
+	} else if len(ev.Members) > 2 {
 		return nil // The message isn't for the user.
 	}
 
