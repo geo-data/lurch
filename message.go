@@ -100,3 +100,17 @@ func (m *ChannelMessage) Send(msg string) error {
 	m.rtm.SendMessage(m.rtm.NewOutgoingMessage(msg, m.channelID))
 	return nil
 }
+
+type Broadcast struct {
+	rtm   *slack.RTM
+	chans *Channels
+}
+
+func NewBroadcast(rtm *slack.RTM, chans *Channels) *Broadcast {
+	return &Broadcast{rtm, chans}
+}
+
+func (b *Broadcast) Send(msg string) error {
+	BroadcastMessage(b.rtm, msg, b.chans.GetChannels())
+	return nil
+}

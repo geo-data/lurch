@@ -2,19 +2,23 @@ package main
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/fsouza/go-dockerclient"
 )
 
 type Config struct {
-	BotName        string
-	CommandChannel string
-	SlackToken     string
-	Docker         dockerConfig
-	UpdateImage    bool
-	Debug          bool
-	ConnAttempts   int
-	Stacks         map[string]Stack
+	sync.RWMutex
+
+	Channels     *Channels // Channels of which Lurch is a member.
+	BotName      string
+	EnableDM     bool
+	SlackToken   string
+	Docker       dockerConfig
+	UpdateImage  bool
+	Debug        bool
+	ConnAttempts int
+	Stacks       map[string]Stack
 }
 
 // GetStackList returns an ordered list of stack names.
@@ -23,6 +27,43 @@ func (c *Config) GetStackList() (stacks []string) {
 		stacks = append(stacks, stack)
 	}
 	sort.Strings(stacks)
+	return
+}
+
+type Channels struct {
+	sync.RWMutex
+	Names map[string]bool
+}
+
+func NewChannels() *Channels {
+	return &Channels{
+		Names: make(map[string]bool),
+	}
+}
+
+func (c *Channels) RemoveChannel(id string) {
+	c.Lock()
+	defer c.Unlock()
+	delete(c.Names, id)
+}
+
+func (c *Channels) AddChannel(id string) {
+	c.Lock()
+	defer c.Unlock()
+	c.Names[id] = true
+}
+
+func (c *Channels) HasChannel(id string) (yes bool) {
+	c.RLock()
+	defer c.RUnlock()
+	_, yes = c.Names[id]
+	return
+}
+
+func (c *Channels) GetChannels() (chans []string) {
+	for id := range c.Names {
+		chans = append(chans, id)
+	}
 	return
 }
 

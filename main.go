@@ -18,7 +18,7 @@ import (
 
 var version, commit string
 
-func catchSignals(exit chan<- bool, rtm *slack.RTM, channelID string, logger *log.Logger) {
+func catchSignals(exit chan<- bool, rtm *slack.RTM, config *Config, logger *log.Logger) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -34,9 +34,10 @@ func catchSignals(exit chan<- bool, rtm *slack.RTM, channelID string, logger *lo
 				timeout <- true
 			}()
 
-			// Notify the channel that I'm leaving.
+			// Notify the channels I'm a member of that I'm leaving.
+			bc := NewBroadcast(rtm, config.Channels)
 			msg := fmt.Sprintf("I have received the %s signal and am leaving. :anguished:", sig.String())
-			rtm.SendMessage(rtm.NewOutgoingMessage(msg, channelID))
+			bc.Send(msg)
 
 			// Wait for the received response or timeout.
 			for {
@@ -56,10 +57,10 @@ func catchSignals(exit chan<- bool, rtm *slack.RTM, channelID string, logger *lo
 	}()
 }
 
-func GetChannelID(api *slack.Client, channelName string, maxAttempts int, logger *log.Logger) (id string, err error) {
+func UpdateChannels(rtm *slack.RTM, config *Config, logger *log.Logger) (err error) {
+	maxAttempts := config.ConnAttempts
 	for attempts := 1; attempts <= maxAttempts; attempts++ {
-		id, err = GetIDFromName(api, channelName)
-		if err == nil {
+		if err = updateChannels(rtm, config); err == nil {
 			break
 		}
 
@@ -82,18 +83,6 @@ func run(config *Config, logger *log.Logger) (err error) {
 	slack.SetLogger(logger)
 	api.SetDebug(config.Debug)
 
-	var channelID string
-	if channelID, err = GetChannelID(api, config.CommandChannel, config.ConnAttempts, logger); err != nil {
-		return
-	}
-
-	if err != nil {
-		return
-	} else if channelID == "" {
-		err = fmt.Errorf("the command channel does not exist: %s", config.CommandChannel)
-		return
-	}
-
 	// Obtain a handle on the Slack Real Time Messaging API.
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
@@ -101,9 +90,14 @@ func run(config *Config, logger *log.Logger) (err error) {
 	// Set the state to check which deployments are ongoing.
 	state := NewDeployState()
 
+	if err = UpdateChannels(rtm, config, logger); err != nil {
+		err = errors.New(fmt.Sprintf("I couldn't set my channel membership: %s", err))
+		return
+	}
+
 	// Respond to signals.
 	exit := make(chan bool, 1)
-	go catchSignals(exit, rtm, channelID, logger)
+	go catchSignals(exit, rtm, config, logger)
 
 	// The main event loop.
 	var lurch *User
@@ -119,20 +113,19 @@ Loop:
 				//fmt.Println("Infos:", ev.Info)
 				//fmt.Println("Connection counter:", ev.ConnectionCount)
 				lurch = NewUser(ev.Info.User)
-				processConnectedEvent(rtm, channelID, config)
+				processConnectedEvent(rtm, config)
 
 			case *slack.DisconnectedEvent:
 				var msg string
 				if ev.Intentional {
-					msg = fmt.Sprintf("sent away from channel %s", config.CommandChannel)
+					msg = "sent away"
 				} else {
-					msg = fmt.Sprintf("forcibly disconnected from channel %s", config.CommandChannel)
+					msg = "forcibly disconnected"
 				}
 				logger.Printf(msg)
 
 			case *slack.MessageEvent:
-				//fmt.Printf("Message : %v\n", ev)
-				go processMessage(rtm, ev, lurch, channelID, state, config, logger)
+				go processMessage(rtm, ev, lurch, state, config, logger)
 
 			case *slack.RTMError:
 				logger.Printf("error: %s\n", ev.Error())
@@ -141,8 +134,18 @@ Loop:
 				logger.Print("invalid credentials")
 				break Loop
 
+			case *slack.GroupLeftEvent:
+				config.Channels.RemoveChannel(ev.Channel)
+			case *slack.ChannelLeftEvent:
+				config.Channels.RemoveChannel(ev.Channel)
+
+			case *slack.GroupJoinedEvent:
+				config.Channels.AddChannel(ev.Channel.ID)
+			case *slack.ChannelJoinedEvent:
+				config.Channels.AddChannel(ev.Channel.ID)
+
 			default:
-				// Ignore other events..
+				// Ignore other events...
 				//fmt.Printf("Unexpected: %v\n", msg.Data)
 			}
 		case <-exit:
@@ -197,12 +200,11 @@ func main() {
 			Usage:  "don't check the registry for newer versions of the docker image",
 			EnvVar: "LURCH_NO_PULL",
 		},
-		cli.StringFlag{
-			Name:        "command-channel",
-			Usage:       "the channel on which to issue commands to lurch",
-			Value:       "devops",
-			EnvVar:      "LURCH_COMMAND_CHANNEL",
-			Destination: &config.CommandChannel,
+		cli.BoolFlag{
+			Name:        "enable-dm",
+			Usage:       "run playbooks over direct message channels.",
+			EnvVar:      "LURCH_ENABLE_DM",
+			Destination: &config.EnableDM,
 		},
 		cli.StringFlag{
 			Name:        "registry-user",

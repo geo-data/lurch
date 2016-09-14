@@ -503,6 +503,7 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 		}
 
 		reply := fmt.Sprintf("I'm sorry, *%s* failed on *%s %s*:", action, stack, playbook)
+		fmt.Printf("here: %s", string(output))
 		for _, hosts := range plays {
 			for host, tasks := range hosts {
 				ttxt := "task"
@@ -611,17 +612,45 @@ func updateConfig(msg Conversation, client *docker.Client, config *Config) (err 
 	return
 }
 
-func processConnectedEvent(rtm *slack.RTM, channelID string, config *Config) {
-	msg := NewChannelMessage(rtm, channelID)
+func updateChannels(rtm *slack.RTM, config *Config) error {
+	channels := NewChannels()
+
+	chans, err := rtm.GetChannels(true)
+	if err != nil {
+		return err
+	}
+	for _, c := range chans {
+		if c.IsMember {
+			channels.Names[c.ID] = true
+		}
+	}
+
+	groups, err := rtm.GetGroups(true)
+	if err != nil {
+		return err
+	}
+	for _, g := range groups {
+		channels.Names[g.ID] = true
+	}
+
+	config.Lock()
+	defer config.Unlock()
+	config.Channels = channels
+
+	return nil
+}
+
+func processConnectedEvent(rtm *slack.RTM, config *Config) {
+	bc := NewBroadcast(rtm, config.Channels)
 
 	client, err := getDockerClient()
 	if err != nil {
-		msg.Send(fmt.Sprintf("I could not create the Docker client: %s", err))
+		bc.Send(fmt.Sprintf("I couldn't create the Docker client: %s", err))
 		return
 	}
 
-	if updateConfig(msg, client, config) == nil {
-		msg.Send("You rang...?")
+	if updateConfig(bc, client, config) == nil {
+		bc.Send("You rang...?")
 	}
 
 	return
@@ -644,7 +673,6 @@ func processMessage(
 	rtm *slack.RTM,
 	ev *slack.MessageEvent,
 	user *User,
-	deployID string,
 	state *DeployState,
 	config *Config,
 	logger *log.Logger) {
@@ -675,10 +703,10 @@ func processMessage(
 	case "deploy":
 		fallthrough
 	default:
-		if deployID != ev.Channel {
-			msg.Reply(fmt.Sprintf("I'm sorry, you can only run playbook commands on the *%s* channel. This way everyone is notified.", config.CommandChannel))
-		} else {
+		if config.EnableDM || config.Channels.HasChannel(ev.Channel) {
 			processDeploy(msg, cmd, state, config)
+		} else {
+			msg.Reply("I'm sorry, you can only run playbook commands on a group channel. This way everyone is notified.  This can be changed using my `--enable-dm` command line option.")
 		}
 	}
 }
