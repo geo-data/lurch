@@ -15,7 +15,7 @@ type Config struct {
 	EnableDM     bool
 	SlackToken   string
 	Docker       dockerConfig
-	UpdateImage  bool
+	DisablePull  bool
 	Debug        bool
 	ConnAttempts int
 	Stacks       map[string]Stack

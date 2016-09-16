@@ -196,9 +196,10 @@ func main() {
 			EnvVar: "LURCH_DOCKER_IMAGE",
 		},
 		cli.BoolFlag{
-			Name:   "no-pull",
-			Usage:  "don't check the registry for newer versions of the docker image",
-			EnvVar: "LURCH_NO_PULL",
+			Name:        "disable-pull",
+			Usage:       "don't check the registry for newer versions of the docker image",
+			EnvVar:      "LURCH_DISABLE_PULL",
+			Destination: &config.DisablePull,
 		},
 		cli.BoolFlag{
 			Name:        "enable-dm",
@@ -247,8 +248,6 @@ func main() {
 
 	app.Action = func(c *cli.Context) (err error) {
 		logger := log.New(os.Stdout, fmt.Sprintf("%s: ", config.BotName), log.Lshortfile|log.LstdFlags)
-
-		config.UpdateImage = !c.Bool("no-pull")
 
 		if config.SlackToken == "" {
 			err = errors.New("no slack token is provided")

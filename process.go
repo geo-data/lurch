@@ -277,7 +277,7 @@ func updateConfigFromImage(msg Conversation, client *docker.Client, config *Conf
 
 func updateDevopsImage(msg Conversation, client *docker.Client, config *Config) (updated bool, err error) {
 	// Check whether the image should even be updated.
-	if !config.UpdateImage {
+	if config.DisablePull {
 		return
 	}
 
