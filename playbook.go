@@ -43,6 +43,7 @@ func (n *Name) String() string {
 }
 
 type Host struct {
-	Failed bool   `json:failed`
-	Msg    string `json:msg`
+	Failed      bool   `json:failed`
+	Unreachable bool   `json:unreachable`
+	Msg         string `json:msg`
 }

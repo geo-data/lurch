@@ -492,7 +492,7 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 			for _, task := range play.Tasks {
 				tname := task.Name.Name
 				for hname, host := range task.Hosts {
-					if host.Failed {
+					if host.Failed || host.Unreachable {
 						hosts[hname] = append(hosts[hname], FailedTask{tname, host.Msg})
 					}
 				}
@@ -503,7 +503,7 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 		}
 
 		reply := fmt.Sprintf("I'm sorry, *%s* failed on *%s %s*:", action, stack, playbook)
-		fmt.Printf("here: %s", string(output))
+		//fmt.Printf("here: %s", string(output))
 		for _, hosts := range plays {
 			for host, tasks := range hosts {
 				ttxt := "task"
@@ -512,7 +512,13 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 				}
 				r := fmt.Sprintf("The *%s* host has %d %s failing:", host, len(tasks), ttxt)
 				for i, task := range tasks {
-					r += fmt.Sprintf("\n*%d. %s* returned this error:\n>%s", i+1, Sentence(task.Name, ""), strings.Replace(task.Msg, "\n", "\n>", -1))
+					var name string
+					if task.Name != "" {
+						name = Sentence(task.Name, "")
+					} else {
+						name = "Running the play" // It's a generic error.
+					}
+					r += fmt.Sprintf("\n*%d. %s* returned this error:\n>%s", i+1, name, strings.Replace(task.Msg, "\n", "\n>", -1))
 				}
 				if (len(reply) + len(r) + 1) > slack.MaxMessageTextLength {
 					if len(reply) > 0 {
