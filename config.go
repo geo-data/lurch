@@ -30,14 +30,22 @@ func (c *Config) GetStackList() (stacks []string) {
 	return
 }
 
+type ChannelType uint8
+
+const (
+	None    ChannelType = iota // 0
+	Channel                    // 1
+	Group                      // 2
+)
+
 type Channels struct {
 	sync.RWMutex
-	Names map[string]bool
+	Names map[string]ChannelType
 }
 
 func NewChannels() *Channels {
 	return &Channels{
-		Names: make(map[string]bool),
+		Names: make(map[string]ChannelType),
 	}
 }
 
@@ -47,16 +55,23 @@ func (c *Channels) RemoveChannel(id string) {
 	delete(c.Names, id)
 }
 
-func (c *Channels) AddChannel(id string) {
+func (c *Channels) AddChannel(id string, t ChannelType) {
 	c.Lock()
 	defer c.Unlock()
-	c.Names[id] = true
+	c.Names[id] = t
 }
 
 func (c *Channels) HasChannel(id string) (yes bool) {
 	c.RLock()
 	defer c.RUnlock()
 	_, yes = c.Names[id]
+	return
+}
+
+func (c *Channels) GetType(id string) (t ChannelType) {
+	c.RLock()
+	defer c.RUnlock()
+	t, _ = c.Names[id]
 	return
 }
 

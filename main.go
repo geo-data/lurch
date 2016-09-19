@@ -140,9 +140,9 @@ Loop:
 				config.Channels.RemoveChannel(ev.Channel)
 
 			case *slack.GroupJoinedEvent:
-				config.Channels.AddChannel(ev.Channel.ID)
+				config.Channels.AddChannel(ev.Channel.ID, Group)
 			case *slack.ChannelJoinedEvent:
-				config.Channels.AddChannel(ev.Channel.ID)
+				config.Channels.AddChannel(ev.Channel.ID, Channel)
 
 			default:
 				// Ignore other events...

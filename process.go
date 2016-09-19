@@ -621,7 +621,7 @@ func updateChannels(rtm *slack.RTM, config *Config) error {
 	}
 	for _, c := range chans {
 		if c.IsMember {
-			channels.Names[c.ID] = true
+			channels.Names[c.ID] = Channel
 		}
 	}
 
@@ -630,7 +630,7 @@ func updateChannels(rtm *slack.RTM, config *Config) error {
 		return err
 	}
 	for _, g := range groups {
-		channels.Names[g.ID] = true
+		channels.Names[g.ID] = Group
 	}
 
 	config.Lock()
