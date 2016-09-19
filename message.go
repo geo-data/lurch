@@ -24,8 +24,10 @@ func NewMessage(rtm *slack.RTM, ev *slack.MessageEvent, user *User) *Message {
 	// Get the message text.
 	if ev.SubMessage != nil && ev.SubType == "message_changed" {
 		text = ev.SubMessage.Text
-	} else {
+	} else if ev.SubType == "" {
 		text = ev.Text
+	} else {
+		return nil
 	}
 
 	// Decide if the message is for us.
