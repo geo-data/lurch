@@ -17,12 +17,12 @@ var pulling Toggle
 
 func sendHelp(intro string, msg *Message) {
 	msg.Reply(fmt.Sprintf(`%s. I can help with the following commands:
-• *%s* - deploy an application.
-• *%s* - list applications I can deploy.
+• *%s* - run a playbook.
+• *%s* - list playbooks I can run.
 • *%s* - give an idea of how advanced I am.
 Use *%s* for further details.`,
 		intro,
-		"`deploy`",
+		"`run`",
 		"`list`",
 		"`version`",
 		"`help <command>`",
@@ -34,7 +34,7 @@ func helpList(intro string, msg *Message) {
 	if len(intro) > 0 {
 		reply = fmt.Sprintf("%s. ", intro)
 	}
-	reply += "Use *`list`* as follows:\n  • Simply *`list`* to find the projects I can deal with;\n  • *`list <project>`* to find playbooks associated with a project;\n  • and *`list <project> <playbook>`* to describe any custom actions available for a playbook."
+	reply += "Use *`list`* as follows:\n  • Simply *`list`* to find the stacks I can deal with;\n  • *`list <stack>`* to find playbooks associated with a stack;\n  • and *`list <stack> <playbook>`* to describe any custom actions available for a playbook."
 	msg.Reply(reply)
 }
 
@@ -45,8 +45,8 @@ func processHelp(msg *Message, cmd []string) {
 	}
 
 	switch cmd[0] {
-	case "deploy":
-		msg.Reply("Use *`deploy <project> <service>`* to deploy a service related to a project. If a project has custom actions associated with it then just replace `deploy` with the name of the action.")
+	case "drun":
+		msg.Reply("Use *`run <stack> <playbook>`* to run a playbook related to a stack. If a stack has custom actions associated with it then just replace `run` with the name of the action.")
 	case "list":
 		helpList("", msg)
 	case "version":
@@ -78,26 +78,26 @@ func Sentence(s, suffix string) string {
 	return strings.ToUpper(string([]rune(s)[0])) + s[1:] + suffix
 }
 
-func listProjects(msg *Message, config *Config) {
-	projects := config.GetStackList()
+func listStacks(msg *Message, config *Config) {
+	stacks := config.GetStackList()
 
 	var reply string
-	switch len(projects) {
+	switch len(stacks) {
 	case 0:
-		reply = "Sorry, there don't seem to be any projects at the moment."
+		reply = "Sorry, there don't seem to be any stacks at the moment."
 	case 1:
-		reply = fmt.Sprintf("I only know about the *%s* project.", projects[0])
+		reply = fmt.Sprintf("I only know about the *%s* stack.", stacks[0])
 	default:
-		reply = fmt.Sprintf("I know about the following %d projects:\n  • %s", len(projects), strings.Join(projects, "\n  • "))
+		reply = fmt.Sprintf("I know about the following %d stacks:\n  • %s", len(stacks), strings.Join(stacks, "\n  • "))
 	}
 
 	msg.Reply(reply)
 	return
 }
 
-func getStack(msg *Message, project string, config *Config) (stack *Stack) {
-	if s, ok := config.Stacks[project]; !ok {
-		msg.Reply(fmt.Sprintf("Oh dear.  I'm afraid I don't know anything about the *%s* stack.  Perhaps it's a typo or perhaps you need to configure it?", project))
+func getStack(msg *Message, name string, config *Config) (stack *Stack) {
+	if s, ok := config.Stacks[name]; !ok {
+		msg.Reply(fmt.Sprintf("Oh dear.  I'm afraid I don't know anything about the *%s* stack.  Perhaps it's a typo or perhaps you need to configure it?", name))
 		return
 	} else {
 		stack = &s
@@ -117,8 +117,8 @@ func getPlaybook(msg *Message, name string, stack *Stack) (playbook *Playbook) {
 	return
 }
 
-func listProject(msg *Message, project string, config *Config) {
-	stack := getStack(msg, project, config)
+func listStack(msg *Message, name string, config *Config) {
+	stack := getStack(msg, name, config)
 	if stack == nil {
 		return
 	}
@@ -128,11 +128,11 @@ func listProject(msg *Message, project string, config *Config) {
 	pc := len(playbooks)
 	switch pc {
 	case 0:
-		reply = fmt.Sprintf("It doesn't look like there are any services associated with *%s*.", project)
+		reply = fmt.Sprintf("It doesn't look like there are any playbooks associated with *%s*.", name)
 	case 1:
-		service := playbooks[0]
-		pb := stack.Playbooks[service]
-		reply = fmt.Sprintf("The *%s* project only has the *%s* service", project, service)
+		playbook := playbooks[0]
+		pb := stack.Playbooks[playbook]
+		reply = fmt.Sprintf("The *%s* stack only has the *%s* playbook", name, playbook)
 		if pb.About != "" {
 			reply += fmt.Sprintf(" designed to %s.", Desentence(pb.About))
 		} else {
@@ -148,10 +148,10 @@ func listProject(msg *Message, project string, config *Config) {
 		}
 
 	default:
-		reply = fmt.Sprintf("The *%s* project has %d services associated with it:", project, pc)
-		for _, name := range playbooks {
-			pb := stack.Playbooks[name]
-			reply += fmt.Sprintf("\n  • *%s*", name)
+		reply = fmt.Sprintf("The *%s* stack has %d playbooks associated with it:", name, pc)
+		for _, pname := range playbooks {
+			pb := stack.Playbooks[pname]
+			reply += fmt.Sprintf("\n  • *%s*", pname)
 			switch len(pb.Actions) {
 			case 0:
 			case 1:
@@ -169,13 +169,13 @@ func listProject(msg *Message, project string, config *Config) {
 	return
 }
 
-func listPlaybook(msg *Message, project, playbook string, config *Config) {
-	stack := getStack(msg, project, config)
-	if stack == nil {
+func listPlaybook(msg *Message, stack, playbook string, config *Config) {
+	st := getStack(msg, stack, config)
+	if st == nil {
 		return
 	}
 
-	pb := getPlaybook(msg, playbook, stack)
+	pb := getPlaybook(msg, playbook, st)
 	if pb == nil {
 		return
 	}
@@ -222,20 +222,20 @@ func processList(msg *Message, cmd []string, config *Config) {
 	}
 
 	if len(config.Stacks) == 0 {
-		msg.Reply("I'm sorry; there aren't any projects listed.")
+		msg.Reply("I'm sorry; there aren't any stacks listed.")
 		return
 	}
 
 	switch len(cmd) {
 	case 0:
-		listProjects(msg, config)
+		listStacks(msg, config)
 	case 1:
-		project := cmd[0]
-		listProject(msg, project, config)
+		stack := cmd[0]
+		listStack(msg, stack, config)
 	case 2:
-		project := cmd[0]
+		stack := cmd[0]
 		playbook := cmd[1]
-		listPlaybook(msg, project, playbook, config)
+		listPlaybook(msg, stack, playbook, config)
 	default:
 		helpList("I'm sorry, I have no idea what you're asking", msg)
 	}
@@ -362,21 +362,21 @@ Loop:
 	return
 }
 
-func lockProject(msg *Message, project string, state *DeployState) (unlock func()) {
-	if !state.Set(project) {
-		msg.Reply(fmt.Sprintf("Patience! I'm already busy deploying services from *%s* - please wait until I'm done.", project))
+func lockStack(msg *Message, stack string, state *RunState) (unlock func()) {
+	if !state.Set(stack) {
+		msg.Reply(fmt.Sprintf("Patience! I'm already busy running a playbook from *%s* - please wait until I'm done.", stack))
 		return
 	}
 
 	unlock = func() {
-		state.Unset(project)
+		state.Unset(stack)
 	}
 
 	return
 }
 
-func deployStack(msg *Message, action, stack string, state *DeployState, config *Config) {
-	unlock := lockProject(msg, stack, state)
+func runStack(msg *Message, action, stack string, state *RunState, config *Config) {
+	unlock := lockStack(msg, stack, state)
 	if unlock == nil {
 		return
 	}
@@ -393,18 +393,18 @@ func deployStack(msg *Message, action, stack string, state *DeployState, config 
 
 	switch pc {
 	case 0:
-		reply = fmt.Sprintf("It doesn't look like there are any services associated with *%s*", stack)
+		reply = fmt.Sprintf("It doesn't look like there are any playbooks associated with *%s*", stack)
 	case 1:
-		reply = fmt.Sprintf("The *%s* project only has the *%s* service associated with it but you need to explicitly type it.", stack, playbooks[0])
+		reply = fmt.Sprintf("The *%s* stack only has the *%s* playbook associated with it but you need to explicitly type it.", stack, playbooks[0])
 	default:
-		reply = fmt.Sprintf("Please specify a service from the *%s* project:\n  • %s", stack, strings.Join(playbooks, "\n  • "))
+		reply = fmt.Sprintf("Please specify a playbook from the *%s* stack:\n  • %s", stack, strings.Join(playbooks, "\n  • "))
 	}
 	msg.Reply(reply)
 	return
 }
 
-func deployPlaybook(msg *Message, action, stack, playbook string, client *docker.Client, state *DeployState, config *Config) {
-	unlock := lockProject(msg, stack, state)
+func runPlaybook(msg *Message, action, stack, playbook string, client *docker.Client, state *RunState, config *Config) {
+	unlock := lockStack(msg, stack, state)
 	if unlock == nil {
 		return
 	}
@@ -418,7 +418,7 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 	// Ensure the playbook requested actually exists.
 	var pb Playbook
 	if p, ok := st.Playbooks[playbook]; !ok {
-		msg.Reply(fmt.Sprintf("Hmmm.  I'm not aware of the *%s* service being part of the *%s* project.", playbook, stack))
+		msg.Reply(fmt.Sprintf("Hmmm.  I'm not aware of the *%s* playbook being part of the *%s* stack.", playbook, stack))
 		return
 	} else {
 		pb = p
@@ -426,13 +426,13 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 
 	// Ensure the action is valid.
 	var act *Action
-	if action != "deploy" {
+	if action != "run" {
 		if a, ok := pb.Actions[action]; !ok {
 			actions := pb.GetActionList()
 			// Describe actions that do exist
 			switch len(actions) {
 			case 0:
-				msg.Reply(fmt.Sprintf("I'm afraid the %s service doesn't have any custom actions.", playbook))
+				msg.Reply(fmt.Sprintf("I'm afraid the %s playbook doesn't have any custom actions.", playbook))
 			case 1:
 				msg.Reply(fmt.Sprintf("Hmmm.  I don't know that action: the only custom action associated with *%s* is *%s*.", stack, playbook))
 			case 2:
@@ -446,9 +446,9 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 			act = &a
 		}
 
-		msg.Reply(fmt.Sprintf("OK, I'm running the %s action on the *%s %s* service...", action, stack, playbook))
+		msg.Reply(fmt.Sprintf("OK, I'm running the %s action on the *%s %s* playbook...", action, stack, playbook))
 	} else {
-		msg.Reply(fmt.Sprintf("OK, I'm running the *%s %s* service...", stack, playbook))
+		msg.Reply(fmt.Sprintf("OK, I'm running the *%s %s* playbook...", stack, playbook))
 	}
 
 	// Build the Ansible command.
@@ -566,7 +566,7 @@ func deployPlaybook(msg *Message, action, stack, playbook string, client *docker
 	return
 }
 
-func processDeploy(msg *Message, cmd []string, state *DeployState, config *Config) {
+func processRun(msg *Message, cmd []string, state *RunState, config *Config) {
 	client, err := getDockerClient()
 	if err != nil {
 		msg.Reply(fmt.Sprintf("I could not create the Docker client: %s", err))
@@ -578,7 +578,7 @@ func processDeploy(msg *Message, cmd []string, state *DeployState, config *Confi
 	}
 
 	if len(config.Stacks) == 0 {
-		msg.Reply("I'm sorry; there aren't any projects listed.")
+		msg.Reply("I'm sorry; there aren't any stacks listed.")
 		return
 	}
 
@@ -589,10 +589,10 @@ func processDeploy(msg *Message, cmd []string, state *DeployState, config *Confi
 		msg.Reply("I'm not sure what you mean. Try *`help`* instead.")
 	case 2: // <action> <stack>
 		action, stack := cmd[0], cmd[1]
-		deployStack(msg, action, stack, state, config)
+		runStack(msg, action, stack, state, config)
 	case 3: // <action> <stack> <playbook>
 		action, stack, playbook := cmd[0], cmd[1], cmd[2]
-		deployPlaybook(msg, action, stack, playbook, client, state, config)
+		runPlaybook(msg, action, stack, playbook, client, state, config)
 	default: // Unhandled.
 		msg.Reply("That sounds way too complicated for a simpleton like me to understand! Try *`help`* instead.")
 	}
@@ -679,7 +679,7 @@ func processMessage(
 	rtm *slack.RTM,
 	ev *slack.MessageEvent,
 	user *User,
-	state *DeployState,
+	state *RunState,
 	config *Config,
 	logger *log.Logger) {
 	msg := NewMessage(rtm, ev, user)
@@ -706,11 +706,11 @@ func processMessage(
 	case "version":
 		processVersion(msg)
 
-	case "deploy":
+	case "run":
 		fallthrough
 	default:
 		if config.EnableDM || config.Channels.HasChannel(ev.Channel) {
-			processDeploy(msg, cmd, state, config)
+			processRun(msg, cmd, state, config)
 		} else {
 			msg.Reply("I'm sorry, you can only run playbook commands on a group channel. This way everyone is notified.  This can be changed using my `--enable-dm` command line option.")
 		}

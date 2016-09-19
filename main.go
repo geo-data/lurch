@@ -88,7 +88,7 @@ func run(config *Config, logger *log.Logger) (err error) {
 	go rtm.ManageConnection()
 
 	// Set the state to check which deployments are ongoing.
-	state := NewDeployState()
+	state := NewRunState()
 
 	if err = UpdateChannels(rtm, config, logger); err != nil {
 		err = errors.New(fmt.Sprintf("I couldn't set my channel membership: %s", err))

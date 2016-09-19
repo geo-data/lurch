@@ -2,18 +2,18 @@ package main
 
 import "sync"
 
-type DeployState struct {
+type RunState struct {
 	sync.Mutex
 	state map[string]bool
 }
 
-func NewDeployState() (s *DeployState) {
-	s = &DeployState{}
+func NewRunState() (s *RunState) {
+	s = &RunState{}
 	s.state = make(map[string]bool)
 	return
 }
 
-func (s *DeployState) Set(key string) bool {
+func (s *RunState) Set(key string) bool {
 	s.Lock()
 	defer s.Unlock()
 	if _, ok := s.state[key]; ok {
@@ -24,7 +24,7 @@ func (s *DeployState) Set(key string) bool {
 	return true
 }
 
-func (s *DeployState) Unset(key string) bool {
+func (s *RunState) Unset(key string) bool {
 	s.Lock()
 	defer s.Unlock()
 	if _, ok := s.state[key]; !ok {
