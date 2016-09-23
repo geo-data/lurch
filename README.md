@@ -2,55 +2,28 @@
 
 Lurch is a [Slack bot](https://api.slack.com/bot-users) designed to run
 [Ansible](https://www.ansible.com/) playbooks. You tell Lurch what to do in a
-Slack channel and he will translate those instructions into a command that
-invokes an Ansible playbook.  You define the playbooks to do what you want in
-terms of deployments.
+Slack channel and he will translate those instructions into commands that invoke
+Ansible playbooks using the standard `ansible-playbook` utility.
 
 ## Requirements
 
-The Ansible playbooks reside in a Docker image you create.  This image will
-include a self-contained Ansible installation.  As such an image such as
+Lurch relies on [Docker](https://www.docker.com/) to run Ansible playbooks: the
+Ansible playbooks reside in a Docker image you create.  This decouples your
+Ansible configuration from Lurch: all you need is an image containing your
+playbooks and which has `ansible-playbook` installed.
+
+How you set up your image is completely up to you, but an image such as
 [williamyeh/ansible](https://hub.docker.com/r/williamyeh/ansible/) provides a
 good base image.  Your image will need to include all required SSH configuration
 so that the `ansible-playbook` command can be used successfully to perform
-deployments: Lurch will be using this command. The image will also need to
-fulfil a few conventions to ensure that Lurch can find the deployments.
+deployments.  As long as you are able to run your image along the lines of
+`docker run my/devops-image:latest ansible-playbook my-playbook.yml` then it
+should be usable with Lurch, after adding one more file to the image: the
+`lurch.yml` configuration file (see the section *Informing Lurch of your
+playbooks*).
 
-The first convention is that there will need to be a top level playbook in the
-working directory called `all.yml`.  This should contain Ansible includes for
-all playbooks defining individual deployments.  An example `all.yml` would be:
-
-```
----
-
-# Deployments for my-app
-- include: deploy/my-app/dev.yml
-- include: deploy/my-app/testing.yml
-- include: deploy/my-app/production.yml
-
-# Deployments for my-project
-- include: deploy/my-project/website.yml
-- include: deploy/my-project/wiki.yml
-- include: deploy/my-project/forum.yml
-```
-
-Assuming the YAML files reference valid playbooks, this top level playbook would
-deploy: an application **my-app** with development, testing and production
-deployments; a project **my-project** composed of a website, wiki and forum.
-Lurch will parse this file and examine each include.
-
-The format of the include path is important: if it matches the pattern
-`deploy/<project-name>/<service>.yml` then Lurch will consider it to be a valid
-deployment.  In this way multiple services can be associated with an individual
-project (or application).
-
-There are no conventions that Lurch expects in relation to the execution of
-playbooks with one exception: if asked to restart a service, Lurch will set the
-value of the global playbook variable `state` to `restarted`.  It is assumed
-that the playbooks will make use of this variable to restart services.
-
-N.B. It's likely that the Ansible image will contain configuration secrets and
-you will therefore want keep it in a private Docker Registry rather than on the
+It's likely that your Ansible image will contain configuration secrets and you
+will therefore want keep it in a private Docker Registry rather than on the
 public Docker hub: you can tell Lurch how to access this repository using
 command line options detailed in the following section.
 
@@ -69,7 +42,7 @@ USAGE:
    lurch [global options] command [command options] [arguments...]
    
 VERSION:
-   0.1.0
+   v0.2.0
    
 AUTHOR(S):
    Homme Zwaagstra <hrz@geodata.soton.ac.uk> 
@@ -79,31 +52,101 @@ COMMANDS:
 
 GLOBAL OPTIONS:
    --slack-token value        your Slack API token [$LURCH_SLACK_TOKEN]
-   --docker-image value       the Docker image to manipulate [$LURCH_DOCKER_IMAGE]
-   --command-channel value    the channel on which to issue commands to lurch (default: "devops") [$LURCH_COMMAND_CHANNEL]
+   --docker-image value       the docker image containing your Ansible playbooks [$LURCH_DOCKER_IMAGE]
+   --disable-pull             don't check the registry for newer versions of the docker image [$LURCH_DISABLE_PULL]
+   --enable-dm                run playbooks over direct message channels. [$LURCH_ENABLE_DM]
    --registry-user value      the username for the docker registry [$LURCH_REGISTRY_USER]
    --registry-password value  the password for the docker registry [$LURCH_REGISTRY_PASSWORD]
    --registry-email value     the email for the docker registry [$LURCH_REGISTRY_EMAIL]
    --registry-address value   the server address for the docker registry [$LURCH_REGISTRY_ADDRESS]
    --debug                    produce debugging output [$LURCH_DEBUG]
+   --conn-attempts value      the maximum number of attempts to be made to connect to Slack on startup (default: 20) [$LURCH_CONN_ATTEMPTS]
    --help, -h                 show help
    --version, -v              print the version
 ```
 
 Key command line options are `--slack-token` and `--docker-image`.  Your unique
 Slack token is generated when you add a custom bot integration to your Slack
-team.  The Docker image is your custom Ansible deployment image.  If you are
-wanting to instruct Lurch on a channel other than the default **devops** channel
-you will want to inform Lurch of this using the `--docker-image` option.  The
-`--registry-*` options define the connection parameters to a Docker Registry:
-this defaults to the Docker Hub which, as described previously, is probably not
-what you want for security reasons.  Note that most command line options can
-also be specified using environment variables.
+team.  The Docker image is your custom Ansible deployment image.
+
+The `--registry-*` options define the connection parameters to a Docker
+Registry: this defaults to the Docker Hub which, as described in the previous
+section, is probably not what you want for security reasons.
+
+Note that most command line options can also be specified using environment
+variables.
 
 Once Lurch is running, he should introduce himself on your command channel.
 From there you can interact with him and instruct him to deploy and restart the
 playbooks listed in your Ansible docker image.  Type `@lurch help` (or just
 `lurch help`) in the command channel to get started.
+
+## Informing Lurch of your playbooks
+
+Lurch uses a file called `lurch.yml` to define interactions with your Docker
+image.  This file should sit in the current working directory of your image.
+The following example shows you what a `lurch.yml` might look like:
+
+```
+---
+
+docker-registry:
+  production:
+    playbook: ./deploy/docker-registry/production.yml
+    about: Deploy the private Docker Registry
+
+gogs:
+  production: 
+    playbook: ./deploy/gogs/production.yml
+    about: Deploy the Gogs Git serice
+
+my-website:
+  production:
+    playbook: ./deploy/my-website/production.yml
+    about: Deploy the live website
+    actions:
+      restart:
+        about: Restart the website services
+        vars:
+          state: restarted
+      stop:
+        about: Stop the website services
+        vars:
+          state: stopped
+
+  wiki:
+    playbook: ./deploy/my-website/wiki.yml
+    about: Deploy the wiki
+
+  clean:
+    playbook: ./deploy/my-website/clean.yml
+    about: Remove all temporary files from the website
+```
+
+The file defines, in order of hierarchy: **stacks**; **playbooks**; and
+**actions**.  There are three **stacks** in the example: `docker-registry`;
+`gogs`; and `my-website`. `docker-registry` has one playbook: `production`. This
+contains two standard properties: `playbook` and `about`. `playbook` references
+the location of the playbook relative to the current working directory of the
+image.  `about` is a sentence describing the effect of running the playbook.
+
+The `gogs` stack is very similar to `docker-registry`.  Things become a little
+more interesting in the `my-website` stack.  This stack has three playbooks:
+`production`, `wiki` and `clean`.  The `production` playbook contains an
+`actions` property in addition to the `playbook` and `about` properties we've
+seen before.
+
+`actions` defines alternative actions that can be applied to a playbook by
+associating one or more extra playbook variables that are passed to
+`ansible-playbook` via its `--extra-vars` command line option.  The `production`
+playbook has two actions: `restart`; and `stop` which are described by their
+`about` properties.  The `vars` property contains a hash associating variable
+names with values.  In each case there's one variable `state` that is used to
+alter the action of the playbook.
+
+In this way multiple related playbooks can be grouped together into individual
+**stacks**.  Moreover, the default actions of running the playbooks can be
+augmented with customised actions.
 
 ## Installation
 
@@ -137,7 +180,8 @@ environment variables containing secrets like your Slack token).
 
 Typing `make dev` from project root builds development docker image and runs a
 container, placing you at a command prompt within this container.  This uses
-Docker Compose, so ensure you have it installed.
+[Docker Compose](https://docs.docker.com/compose/), so ensure you have it
+installed.
 
 The project root is bind mounted to the current working directory in the
 container allowing you to edit files on the host and run `make` commands within
@@ -150,7 +194,6 @@ defining your Slack and deployment environment e.g.:
 
 ```
 LURCH_SLACK_TOKEN=xxx \
-LURCH_COMMAND_CHANNEL=deploy \
 LURCH_DEBUG=true \
 LURCH_DOCKER_IMAGE=my.registry.org/my/devops-image:latest \
 LURCH_REGISTRY_ADDRESS=my.registry.org \
