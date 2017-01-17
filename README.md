@@ -206,3 +206,9 @@ LURCH_REGISTRY_USER=me \
 LURCH_REGISTRY_PASSWORD=xxx \
 make run
 ```
+
+## License
+
+[![license](https://img.shields.io/github/license/geo-data/lurch.svg)](https://github.com/geo-data/lurch/blob/master/LICENSE)
+
+MIT - See the file `LICENSE` for details.
