@@ -1,5 +1,10 @@
 # Lurch - A DevOps Slack Bot
 
+[![GitHub release](https://img.shields.io/github/release/geo-data/lurch.svg)](https://github.com/geo-data/lurch/releases/latest)
+[![Travis CI](https://img.shields.io/travis/geo-data/lurch.svg)](https://travis-ci.org/geo-data/lurch)
+[![Go Report Card](https://goreportcard.com/badge/github.com/geo-data/lurch)](https://goreportcard.com/report/github.com/geo-data/lurch)
+[![GoDoc](https://img.shields.io/badge/documentation-godoc-blue.svg)](https://godoc.org/github.com/geo-data/lurch)
+
 Lurch is a [Slack bot](https://api.slack.com/bot-users) designed to run
 [Ansible](https://www.ansible.com/) playbooks. You tell Lurch what to do in a
 Slack channel and he will translate those instructions into commands that invoke
@@ -150,17 +155,11 @@ augmented with customised actions.
 
 ## Installation
 
-Lurch is designed to be packaged up in a Docker image.  To generate this image
-(which will only be a few megabytes in size), do the following:
+### Via Docker (recommended)
 
-```
-git clone https://github.com/geo-data/lurch.git
-cd lurch
-make docker
-```
-
-This will create an image tagged `geodata/lurch:latest`, which can be run as
-follows:
+The latest version of Lurch is available from the Docker Registry at
+[geodata/lurch:latest](https://hub.docker.com/r/geodata/lurch).  It can be run
+as follows:
 
 ```
 docker run -d -v /var/run/docker.sock:/var/run/docker.sock \
@@ -175,6 +174,11 @@ can communicate with the docker daemon in order to run the devops docker image.
 Note that you can set environment variables instead of using Lurch's command
 line flags (the `docker run --env-file` flag is a useful option for specifying
 environment variables containing secrets like your Slack token).
+
+### Binary download
+
+You can download a self contained `lurch` binary compiled for Linux x86_64 from
+the [latest release](https://github.com/geo-data/lurch/releases/latest).
 
 ## Contributing
 

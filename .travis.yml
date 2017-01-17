@@ -1,0 +1,35 @@
+sudo: required
+language: go
+env:
+  global:
+    DOCKER_COMPOSE_VERSION: 1.8.1
+  matrix:
+    secure: kC3U8jeqW59sO0sTfl9/T436D3wkEAhtQ9ZB9mEEEnuKGXZ17Ev+4nZvccpG/nTznLW/uV2/9imU+m8+OpxCOh1zku4BewoK0tZaCzkGtuNPan76L/5K8A7Rq9khhJBcilfN0ggACZYiUWmWXxx5+ofUvXxuCOPJrMT+ViWaRLDueeeHH45Ik8KBjURRbEgzMHvj7e1S0cHMho7R/ZC3xrTUNjtohJkytOuEZWKmAEs4BaNvjX9b/1NkhLTP2u0N/AOBlasw2jrxD4buIOQMEGsJnkKNXAxi44n6U9aXIpfPpyDTY5QzbiBpMjLr0MJt3X/Qp2vAS0bUH0IuHyTaIidZ1bSGmhn2SScLAiReQr1Twhg1zuyUMtVQXLstj+6yG+bOCjsWDGe9T3Fuu1Ib7L7ONNOL0mD+tx66+O5DVniT6JNhfJi/942tZ9BOMUs/e/SkCPJJcHSg1OIJCKLXKWNRCfVKAzUlIDp0sDx16woMsjxPJikV40un7BhcNDz6Z9Kn+lwAACTD/Hz51ufViZwULTCECuFPyuiD+OChZsZj8GY56Ojocofd5GzXrpRAkn6OVkRRi8lxBzed4z+VFZX+Bk/t5RSI+gvqtbgkh8ImKYYMrxwoX6Mm0VJUMG8uIkxMkhksDNinbnZq/fSu7xhN64FXPaDply3rnHUGXCg=
+go:
+- 1.7
+- tip
+services:
+- docker
+before_install:
+- sudo rm /usr/local/bin/docker-compose
+- curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname
+  -s`-`uname -m` > docker-compose
+- chmod +x docker-compose
+- sudo mv docker-compose /usr/local/bin/
+script:
+- docker-compose run dev make
+after_success:
+- sudo chown --changes --recursive $(whoami):$(id --group $(whoami)) .
+- if [ "$TRAVIS_BRANCH" == "master" ]; then
+  docker build -t geodata/lurch:latest .;
+  docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+  docker push geodata/lurch:latest;
+  fi
+deploy:
+  provider: releases
+  api_key:
+    secure: CI52VHrHxgp6FfL29VU+Dw8p8d4f3riBkj+mk4YgqMeEN8zMWcGkHAI0M922CTcKBPSDP9eTGo5Lq6mCYptZnoNNjctthFUA+iE0TGW8qzvcbDR98lZDWKYnnH6PU/oOdjAraPU4D998/eh4boQ+VY/4rP5RGhmmAbWvweG6dauWe7yoXvW6AMKzIJO/PIsVD1VruthgwzMBwgvo87kAkBUV+4bNeieo7SyQTBV5rSdwbm5JOkiZteI7twgRqykbBpzQ7xrx+pFvOTvjNuFvBddV9pyyEx2HitRMr1OY5EHs5JTbHvVZ1gy3U5JEFkjbIf4odgmvKobIPw2pj/lG6OP9VBLrGYMqrDyaYLV9D9RMJdRNOtf1QsdpEOsg62SMEK61hidq4qCagOcv0bzOXfaQHWri0Qgh7uw9zkFZ8PzGsNzOj49gupeXpqCU4fhtWgYPGLjz8TqM9wReO8dQ1+fJxZD4S7CCxn95HotgAK2KXmvwk+USKNqPO7RII4OPcUSaV38qiH3yHGjpg3BAnUAeXTAvpjxYjs5LhDKPk8Ek2iM5dzq+NGT/OHCnBH525ezktsCwW/UQuqhG9vJZMvl1lUXV9UeyjTmdpra/51DxR3YwZGXU4gRpKs+i5CIujWL7QNiJaNpng8vEW+RwNKLImbXoqoZ8qsVDPiC0B50=
+  file: lurch
+  skip_cleanup: true
+  on:
+    tags: true
