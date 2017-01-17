@@ -17,7 +17,7 @@ before_install:
 - chmod +x docker-compose
 - sudo mv docker-compose /usr/local/bin/
 script:
-- docker-compose run dev make
+- docker-compose run lurch make
 after_success:
 - sudo chown --changes --recursive $(whoami):$(id --group $(whoami)) .
 - if [ "$TRAVIS_BRANCH" == "master" ]; then
